@@ -1,0 +1,42 @@
+{
+  "erpnext": {
+    "url": "https://ca1.erpnext.cloud",
+    "api_key": "ded79da359ee399",
+    "api_secret": "dada4c53cd40f5c"
+  },
+  "permissions": {
+    "customer": {
+      "read": true,
+      "create": true,
+      "update": true,
+      "delete": false,
+      "allowed_fields": [
+        "name",
+        "customer_name",
+        "customer_type",
+        "customer_group",
+        "territory",
+        "email_id",
+        "mobile_no",
+        "website",
+        "industry",
+        "market_segment",
+        "language",
+        "account_manager",
+        "default_price_list",
+        "sales_person",
+        "payment_terms"
+      ],
+      "restricted_fields": [
+        "creation",
+        "modified",
+        "owner",
+        "modified_by"
+      ]
+    }
+  },
+  "audit": {
+    "enabled": true,
+    "log_file": "audit.log"
+  }
+}
