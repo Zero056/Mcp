@@ -60,7 +60,7 @@ Create `config/config.json`:
 ```json
 {
   "erpnext": {
-    "url": "https://your-erpnext-instance.com",
+    "url": "https://url",
     "api_key": "your_api_key",
     "api_secret": "your_api_secret"
   },
@@ -303,7 +303,7 @@ Find all items containing "laptop" in the name and show their prices
 ### Environment Variables
 ```bash
 # Alternative to config file
-export ERPNEXT_URL="https://your-instance.com"
+export ERPNEXT_URL="https://url"
 export ERPNEXT_API_KEY="your_key"
 export ERPNEXT_API_SECRET="your_secret"
 export MCP_AUDIT_ENABLED="true"
@@ -388,7 +388,7 @@ for i in range(10):
 ```json
 {
   "erpnext": {
-    "url": "https://your-production-instance.com",
+    "url": "https://url",
     "timeout": 60
   },
   "rate_limiting": {
