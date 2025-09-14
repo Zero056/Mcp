@@ -1,6 +1,3 @@
-I'll provide you with the complete, final README.md file that you can use for your GitHub repository:
-
-```markdown
 # ERPNext MCP Server
 
 A comprehensive **Model Context Protocol (MCP) server** for ERPNext that provides **generic, doctype-agnostic access** to any ERPNext document type with **robust permission controls**, **audit logging**, and **enterprise-grade security**.
@@ -45,26 +42,43 @@ graph TB
 ### 1. Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/erpnext-mcp-server.git
-cd erpnext-mcp-server
+# Clone/create project
+mkdir erpnext_mcp_server && cd erpnext_mcp_server
 
 # Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install mcp httpx pydantic python-dotenv typing-extensions
 ```
 
 ### 2. Configuration
 
-```bash
-# Copy example configuration
-cp config/config.example.json config/config.json
+Create `config/config.json`:
 
-# Edit the configuration with your ERPNext credentials
-nano config/config.json
+```json
+{
+  "erpnext": {
+    "url": "https://your-erpnext-instance.com",
+    "api_key": "your_api_key",
+    "api_secret": "your_api_secret"
+  },
+  "permissions": {
+    "doctypes": {
+      "Customer": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false,
+        "allowed_fields": ["customer_name", "email_id", "mobile_no"],
+        "conditions": {
+          "create": {"customer_type": ["Company", "Individual"]}
+        }
+      }
+    }
+  }
+}
 ```
 
 ### 3. Run Server
@@ -133,13 +147,55 @@ The permission system operates on **four security layers**:
 }
 ```
 
-### Example Configuration Scenarios
+### Permission Examples
 
-#### **Multi-Doctype Configuration** (`config/multi_doctype_config.json`)
-Full access to Customer, Item, and Sales Order doctypes with comprehensive field-level controls.
+#### **Restrictive Configuration** (Read-only analyst)
+```json
+{
+  "permissions": {
+    "doctypes": {
+      "Customer": {
+        "read": true,
+        "create": false,
+        "update": false,
+        "delete": false,
+        "allowed_fields": ["name", "customer_name", "territory", "customer_group"]
+      },
+      "Sales Invoice": {
+        "read": true,
+        "create": false,
+        "update": false,
+        "delete": false,
+        "allowed_fields": ["name", "customer", "total", "status", "posting_date"]
+      }
+    }
+  }
+}
+```
 
-#### **Restricted Configuration** (`config/restricted_config.json`)
-Read-only access for analysts with field-level restrictions on sensitive data.
+#### **Operational Configuration** (Sales user)
+```json
+{
+  "permissions": {
+    "doctypes": {
+      "Customer": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false,
+        "allowed_fields": [
+          "customer_name", "customer_type", "email_id", "mobile_no",
+          "customer_group", "territory", "website"
+        ],
+        "conditions": {
+          "create": {"customer_type": ["Company", "Individual"]},
+          "update": {"status": {"not_in": ["Disabled"]}}
+        }
+      }
+    }
+  }
+}
+```
 
 ## 🛠️ Available Tools & Usage
 
@@ -286,59 +342,11 @@ Example audit log:
 2024-01-15 10:31:12 - WARNING - Operation: DELETE | DocType: Customer | Result: DENIED | Reason: Delete operation not allowed for doctype 'Customer'
 ```
 
-## 🧪 Testing & Demonstration
-
-### Run Demonstration Script
-```bash
-python tests/test_demo.py
-```
-
-### Expected Demo Output
-```
-🚀 ERPNext MCP Server Demonstration
-============================================================
-
-1. 🔗 Testing connection... ✅ Connected: True
-
-📖 READ OPERATIONS DEMONSTRATION
-============================================================
-
-2. 📋 Reading customers... ✅ Found 15 customers
-   1. CUST-0001 - ABC Company
-   2. CUST-0002 - XYZ Corporation
-   3. CUST-0003 - Test Enterprise
-
-3. 📦 Reading items... ✅ Found 8 items
-   1. ITEM-0001 - Laptop
-   2. ITEM-0002 - Mouse
-   3. ITEM-0003 - Keyboard
-
-📝 WRITE OPERATIONS DEMONSTRATION
-============================================================
-
-4. ➕ Creating customer... ✅ Customer created: CUST-0016
-5. 📦 Creating item... ✅ Item created: DEMO-ITEM-1736791234
-
-🔐 PERMISSION SYSTEM DEMONSTRATION
-============================================================
-
-6. 🛡️ Permission checks:
-   Customer: R:✅ C:✅ U:✅ D:❌
-   Item: R:✅ C:✅ U:✅ D:❌
-   Sales Order: R:✅ C:✅ U:✅ D:❌
-   Sales Invoice: R:❌ C:❌ U:❌ D:❌
-
-7. 🎯 Field filtering demonstration:
-   Original: ['customer_name', 'email_id', 'credit_limit', 'mobile_no']
-   Filtered: ['customer_name', 'email_id', 'mobile_no']
-   Removed: {'credit_limit'}
-
-✅ DEMONSTRATION COMPLETED SUCCESSFULLY!
-```
+## 🧪 Testing & Validation
 
 ### Test Connection
 ```bash
-python tests/test_client.py
+python test_client.py
 ```
 
 ### Validate Permissions
@@ -358,6 +366,20 @@ allowed, reason = pm.validate_operation("create", "Customer", {
     "customer_name": "Test Corp",
     "customer_type": "Company"
 })
+```
+
+### Performance Testing
+```python
+import asyncio
+from src.erpnext_client import ERPNextClient
+
+# Test rate limiting and caching
+client = ERPNextClient(url, key, secret, config)
+
+# This should hit cache after first request
+for i in range(10):
+    result = await client.get_doctype_list("Customer")
+    print(f"Request {i+1}: {len(result['data'])} customers")
 ```
 
 ## 🏃‍♂️ Deployment
@@ -430,95 +452,5 @@ CMD ["python", "-m", "src.server"]
 - No partial operations - atomic success/failure
 
 ### Rate Limiting
-- Requests are queued and processed within limits
-- Clear error responses when limits are exceeded
-- Configurable burst handling
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-1. **Connection Failed**
-   - Verify ERPNext URL and API credentials
-   - Check network connectivity and firewall settings
-
-2. **Permission Denied**
-   - Check user permissions in ERPNext
-   - Verify API key has sufficient privileges
-
-3. **Missing Mandatory Fields**
-   - Use field discovery script to identify required fields
-   - Add missing fields to `allowed_fields` in config
-
-4. **Rate Limiting Errors**
-   - Adjust rate limiting settings in configuration
-   - Implement caching for frequent requests
-
-### Logs
-Check the following log files for detailed information:
-- `logs/mcp_server.log` - Server operation logs
-- `logs/audit.log` - Security and access logs
-- `logs/restricted_audit.log` - Restricted access logs
-
-### Support
-1. Check the audit logs for detailed error information
-2. Review ERPNext API documentation for field requirements
-3. Verify ERPNext user permissions and API key privileges
-4. Test with the provided demonstration scripts
-
-## 📋 Project Structure
-
-```
-erpnext-mcp-server/
-├── src/
-│   ├── server.py              # MCP server implementation
-│   ├── erpnext_client.py      # ERPNext API client
-│   ├── permissions.py         # Permission management
-│   └── __init__.py
-├── config/
-│   ├── config.example.json    # Example configuration
-│   ├── multi_doctype_config.json  # Multi-doctype access
-│   ├── restricted_config.json     # Restricted permissions
-│   └── config.json            # User configuration (gitignored)
-├── tests/
-│   ├── test_demo.py           # Demonstration script
-│   ├── test_client.py         # Client tests
-│   ├── test_permissions.py    # Permission tests
-│   └── __init__.py
-├── logs/                      # Log files (gitignored)
-├── requirements.txt           # Python dependencies
-├── pyproject.toml            # Project configuration
-├── .gitignore                # Git ignore rules
-└── README.md                 # This file
-```
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit pull requests or open issues for:
-- Bug fixes and improvements
-- New features and enhancements
-- Documentation updates
-- Test cases and examples
-
----
-
-**Note**: This MCP server requires proper ERPNext API permissions and configuration. Always test in a development environment before deploying to production. Ensure your ERPNext instance has the necessary API endpoints enabled and properly configured.
-```
-
-This README includes:
-1. **Complete architecture overview** with Mermaid diagram
-2. **Quick start instructions** for easy setup
-3. **Detailed permission model** with examples
-4. **Multiple configuration scenarios** (multi-doctype + restricted)
-5. **Comprehensive tool documentation** with usage examples
-6. **Security considerations** and audit logging
-7. **Testing and demonstration** instructions
-8. **Deployment guides** for various environments
-9. **Troubleshooting section** for common issues
-10. **Project structure** overview
-
-You can use this README directly for your GitHub repository. It's comprehensive, professional, and includes all the specifications you requested.
+- Adjust rate limiting settings in config
+- Implement caching for frequent requests
