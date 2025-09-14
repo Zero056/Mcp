@@ -452,4 +452,5 @@ CMD ["python", "-m", "src.server"]
 - No partial operations - atomic success/failure
 
 ### Rate Limiting
--
+-Adjust rate limiting settings in config
+-Implement caching for frequent requests
