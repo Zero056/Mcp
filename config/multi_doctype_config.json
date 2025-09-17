@@ -10,7 +10,7 @@
         "read": true,
         "create": true,
         "update": true,
-        "delete": false,
+        "delete": true,
         "allowed_fields": ["customer_name", "email_id", "mobile_no", "customer_type", "territory", "customer_group", "website"],
         "restricted_fields": ["credit_limit", "payment_terms", "accounts", "default_price_list"],
         "conditions": {
@@ -27,9 +27,9 @@
         "read": true,
         "create": true,
         "update": true,
-        "delete": false,
+        "delete": true,
         "allowed_fields": ["item_code", "item_name", "item_group", "stock_uom", "description", "standard_rate"],
-        "restricted_fields": ["valuation_rate", "last_purchase_rate", "weight_per_unit", "opening_stock"]
+        "restricted_fields": ["valuation_rate", "last_purchase_rate", "weight_per_unit", "opening_stock","owner"]
       },
       "Sales Order": {
         "read": true,

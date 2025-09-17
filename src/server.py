@@ -52,7 +52,7 @@ erpnext_client = ERPNextClient(
 permission_manager = PermissionManager(CONFIG)
 
 # Create server
-app = Server("erpnext-mcp-server")
+app = Server("mcp-server")
 
 
 @app.list_tools()

@@ -7,108 +7,100 @@ from pathlib import Path
 # Add the current directory to Python path
 sys.path.append(str(Path(__file__).parent))
 
-async def create_item_final():
-    
-    # print("🧪 Final Item Creation Test")
-    # print("=" * 50)
-    # 
-    # Use the updated config with all required fields
+async def run_interactive():
+    # Load config
     config_path = "config/multi_doctype_config.json"
     if not os.path.exists(config_path):
         print(f"❌ Config file not found: {config_path}")
         return
     
+    with open(config_path, "r") as f:
+        config = json.load(f)
+    
+    from src.erpnext_client import ERPNextClient
+    from src.permissions import PermissionManager
+    
+    # Initialize clients
+    erp_config = config["erpnext"]
+    client = ERPNextClient(
+        url=erp_config["url"],
+        api_key=erp_config["api_key"],
+        api_secret=erp_config["api_secret"]
+    )
+    perm_manager = PermissionManager(config)
+    
+    # Test connection
+    print("\n🔗 Testing connection...")
+    connected = await client.test_connection()
+    print(f"Connected: {connected}")
+    if not connected:
+        print("❌ Cannot connect to ERPNext. Exiting.")
+        return
+    
+    # Menu for user
+    print("\n📌 Choose operation:")
+    print("1. Get Item")
+    print("2. Create Item")
+    print("3. Update Item")
+    print("4. Delete Item")
+    
+    choice = input("Enter choice (1-4): ").strip()
+    
     try:
-        with open(config_path, "r") as f:
-            config = json.load(f)
+        if choice == "1":  # GET
+            item_code = input("Enter Item Code to fetch: ").strip()
+            result = await client.get_item(item_code)
+            print("\n📄 Item Data:")
+            print(json.dumps(result, indent=2))
         
-        from src.erpnext_client import ERPNextClient
-        from src.permissions import PermissionManager
-        
-        # Initialize clients
-        erp_config = config["erpnext"]
-        client = ERPNextClient(
-            url=erp_config["url"],
-            api_key=erp_config["api_key"],
-            api_secret=erp_config["api_secret"]
-        )
-        
-        perm_manager = PermissionManager(config)
-        
-        # Test connection
-        print("\n Testing connection...")
-        connected = await client.test_connection()
-        print(f"Connected: {connected}")
-        
-        # Create test Item with comprehensive data
-        print("\n* Creating test Item with comprehensive data...")
-        try:
-            timestamp = int(asyncio.get_event_loop().time())
+        elif choice == "2":  # CREATE
+            item_code = input("Enter new Item Code: ").strip()
+            item_name = input("Enter Item Name: ").strip()
+            uom = input("Enter Stock UOM (default Nos): ").strip() or "Nos"
+            group = input("Enter Item Group (default All Item Groups): ").strip() or "All Item Groups"
+            
             test_data = {
-                "item_code": f"Api Item",
-                "item_name": "Api Item",
+                "item_code": item_code,
+                "item_name": item_name,
                 "is_stock_item": 1,
-                "stock_uom": f"Nos",
-                "item_group": f"All Item Groups",
+                "stock_uom": uom,
+                "item_group": group,
             }
             
-            print(f"   item_code: {test_data['item_code']}")
-            print(f"   Item Type: {test_data['item_group']}")
-            print(f"   stock uom: {test_data['stock_uom']}")
+            filtered = perm_manager.filter_allowed_fields(test_data, "Item")
+            result = await client.create_item(filtered)
+            print("\n✅ Item Created:")
+            print(json.dumps(result, indent=2))
+        
+        elif choice == "3":  # UPDATE
+            item_code = input("Enter Item Code to update: ").strip()
+            field = input("Enter field to update (e.g. item_name): ").strip()
+            value = input(f"Enter new value for {field}: ").strip()
             
-            # Filter to only allowed fields
-            filtered_data = perm_manager.filter_allowed_fields(test_data, "Item")
-            print(f"   Using {len(filtered_data)} fields: {list(filtered_data.keys())}")
+            update_data = {field: value}
+            filtered = perm_manager.filter_allowed_fields(update_data, "Item")
+            result = await client.update_item(item_code, filtered)
+            print("\n✅ Item Updated:")
+            print(json.dumps(result, indent=2))
+        
+        elif choice == "4":  # DELETE
+            item_code = input("Enter Item Code to delete: ").strip()
+            confirm = input(f"⚠️ Are you sure you want to delete {item_code}? (yes/no): ").strip().lower()
             
-            # Create the item_code
-            print("   Creating item_code...")
-            result = await client.create_item(filtered_data)
-            
-            if result and "data" in result:
-                item_code = result["data"].get("item_code")
-                print(f" *SUCCESS! Item created: {item_code}")
-                
-                # Quick verification
-                try:
-                    item_details = await client.get_item(item_code)
-                    if item_details and "data" in item_details:
-                        print(f"Verification passed: {item_details['data'].get('item_code')}")
-                except:
-                    print("Created but verification failed")
-                    
+            if confirm == "yes":
+                result = await client.delete_item(item_code)
+                print("\n✅ Item Deleted:")
+                print(json.dumps(result, indent=2))
             else:
-                print(" Failed to create item_code")
-                if result:
-                    print(f"   Response: {json.dumps(result, indent=2)}")
-                
-        except Exception as e:
-            print(f"Error: {e}")
-            
-            # Try with even more basic data if comprehensive fails
-            print("\n*Trying with basic data only...")
-            try:
-                basic_data = {
-                    "item_code": f"Basic Test {timestamp}",
-                    "item_group": "All Item Groups"
-                }
-                
-                basic_filtered = perm_manager.filter_allowed_fields(basic_data, "Item")
-                print(f"   Trying with: {list(basic_filtered.keys())}")
-                
-                result = await client.create_item(basic_filtered)
-                if result and "data" in result:
-                    print(f"Basic creation worked: {result['data'].get('name')}")
-                else:
-                    print("Basic creation also failed")
-                    
-            except Exception as e2:
-                print(f"Basic creation error: {e2}")
+                print("❌ Delete cancelled")
         
-        # print("\n" + "=" * 50)
-        print("✅ TEST COMPLETED!")
-        
+        else:
+            print("❌ Invalid choice")
+    
     except Exception as e:
-        print(f"Test failed: {e}")
+        print(f"Error: {e}")
+    
+    print("\n✅ TEST COMPLETED!")
 
 if __name__ == "__main__":
-    asyncio.run(create_item_final())
+    asyncio.run(run_interactive())

@@ -10,8 +10,6 @@ graph TB
     B --> C[ERPNext MCP Server]
     C --> D[Permission Manager]
     C --> E[ERPNext Client]
-    C --> F[Cache Manager]
-    C --> G[Rate Limiter]
     E --> H[ERPNext API]
     D --> I[Audit Logger]
     
@@ -44,7 +42,8 @@ graph TB
 ```bash
 # Clone/create project
 mkdir erpnext_mcp_server && cd erpnext_mcp_server
-
+git clone https://github.com/Zero056/Mcp/
+cd mcp
 # Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
@@ -60,7 +59,7 @@ Create `config/config.json`:
 ```json
 {
   "erpnext": {
-    "url": "https://your-erpnext-instance.com",
+    "url": "https://yoururl",
     "api_key": "your_api_key",
     "api_secret": "your_api_secret"
   },
@@ -276,34 +275,11 @@ Find all items containing "laptop" in the name and show their prices
 ```
 → Uses `search_item_documents`
 
-## ⚙️ Advanced Configuration
-
-### Rate Limiting
-```json
-{
-  "rate_limiting": {
-    "enabled": true,
-    "requests_per_minute": 60,
-    "requests_per_hour": 1000
-  }
-}
-```
-
-### Caching
-```json
-{
-  "cache": {
-    "enabled": true,
-    "ttl": 300,
-    "max_size": 1000
-  }
-}
-```
 
 ### Environment Variables
 ```bash
 # Alternative to config file
-export ERPNEXT_URL="https://your-instance.com"
+export ERPNEXT_URL="https://yoururl"
 export ERPNEXT_API_KEY="your_key"
 export ERPNEXT_API_SECRET="your_secret"
 export MCP_AUDIT_ENABLED="true"
@@ -317,11 +293,12 @@ export MCP_LOG_LEVEL="INFO"
 - No passwords stored in configuration
 - Supports ERPNext user-level permissions
 
-### Data Protection  
-- Field-level access control prevents sensitive data exposure
-- Audit logging tracks all access attempts
-- Rate limiting prevents abuse
-- Input validation prevents injection attacks
+
+### Generate API Key & Secret
+- Click on "Generate Keys" or "Add API Key"
+- Set appropriate permissions for the API user:
+- User: Select or create a dedicated API user
+- Roles: Assign necessary permissions (e.g., "System Manager", "Sales Manager")
 
 ### Network Security
 - HTTPS-only connections to ERPNext
@@ -346,67 +323,47 @@ Example audit log:
 
 ### Test Connection
 ```bash
-python test_client.py
+python test.py
 ```
 
 ### Validate Permissions
 ```python
-from src.permissions import PermissionManager
+change it from the config json
+  "permissions": {
+    "customer": {
+      "read": true,
+      "create": true,
+      "update": true,
+      "delete": false,
+      "allowed_fields": [
+        "name",
+        "customer_name",
+        "customer_type",
+        "customer_group",
+        "territory",
+        "email_id",
+        "mobile_no",
+        "website",
+        "industry",
+        "market_segment",
+        "language",
+        "account_manager",
+        "default_price_list",
+        "sales_person",
+        "payment_terms"
+      ],
+      "restricted_fields": [
+        "creation",
+        "modified",
+        "owner",
+        "modified_by"
+      ]
+    }
+  },
 
-config = {...}  # Your config
-pm = PermissionManager(config)
-
-# Test permissions
-can_read = pm.can_read("Customer")
-can_create = pm.can_create("Sales Order") 
-allowed_fields = pm.get_allowed_fields("Item")
-
-# Validate operation
-allowed, reason = pm.validate_operation("create", "Customer", {
-    "customer_name": "Test Corp",
-    "customer_type": "Company"
-})
-```
-
-### Performance Testing
-```python
-import asyncio
-from src.erpnext_client import ERPNextClient
-
-# Test rate limiting and caching
-client = ERPNextClient(url, key, secret, config)
-
-# This should hit cache after first request
-for i in range(10):
-    result = await client.get_doctype_list("Customer")
-    print(f"Request {i+1}: {len(result['data'])} customers")
 ```
 
 ## 🏃‍♂️ Deployment
-
-### Production Configuration
-```json
-{
-  "erpnext": {
-    "url": "https://your-production-instance.com",
-    "timeout": 60
-  },
-  "rate_limiting": {
-    "enabled": true,  
-    "requests_per_minute": 30,
-    "requests_per_hour": 500
-  },
-  "audit": {
-    "enabled": true,
-    "log_level": "INFO",
-    "retention_days": 90
-  },
-  "cache": {
-    "enabled": true,
-    "ttl": 600
-  }
-}
-```
 
 ### Claude Desktop Integration
 Add to `claude_desktop_config.json`:
@@ -424,32 +381,3 @@ Add to `claude_desktop_config.json`:
   }
 }
 ```
-
-### Docker Deployment
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-EXPOSE 8080
-
-CMD ["python", "-m", "src.server"]
-```
-
-## 🚨 Failure Modes & Recovery
-
-### Connection Failures
-- Automatic retry with exponential backoff
-- Graceful degradation when ERPNext is unavailable  
-- Connection pooling prevents resource exhaustion
-
-### Permission Violations
-- All unauthorized operations are blocked and logged
-- Clear error messages explain permission requirements
-- No partial operations - atomic success/failure
-
-### Rate Limiting
--

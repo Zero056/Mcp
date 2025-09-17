@@ -3,11 +3,11 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "erpnext-mcp-server"
+name = "mcp-server"
 version = "1.0.0"
-description = "MCP Server for ERPNext Customer Management"
+description = "MCP Server for ERPNext Management"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Hazem Sharaf", email = "hazemsharaf56@gmail.com"}
 ]
 readme = "README.md"
 license = {text = "MIT"}
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-erpnext-mcp-server = "src.server:main"
+mcp-server = "src.server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
