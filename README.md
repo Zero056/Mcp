@@ -294,6 +294,12 @@ export MCP_LOG_LEVEL="INFO"
 - Supports ERPNext user-level permissions
 
 
+### Generate API Key & Secret
+- Click on "Generate Keys" or "Add API Key"
+- Set appropriate permissions for the API user:
+- User: Select or create a dedicated API user
+- Roles: Assign necessary permissions (e.g., "System Manager", "Sales Manager")
+
 ### Network Security
 - HTTPS-only connections to ERPNext
 - Configurable request timeouts
